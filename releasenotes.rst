@@ -1,6 +1,13 @@
 Atom Release Notes
 ==================
 
+0.4.2 - unreleased
+------------------
+- add support for Python 3.7 which introduced FAST_CALL protocol for list
+  methods #81
+- proper size check when creating a list #79
+- drop dependency of future that was takes a large time to import #78
+
 0.4.1 - 28/01/2018
 ------------------
 - add a fall-back to type name/pointer comparison on Python 3. Otherwise
