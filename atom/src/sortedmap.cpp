@@ -5,14 +5,11 @@
 |
 | The full license is in the file COPYING.txt, distributed with this software.
 |----------------------------------------------------------------------------*/
+#include <cppy/cppy.h>
 #include <algorithm>
 #include <vector>
 #include <iostream>
 #include <sstream>
-#include "pythonhelpers.h"
-#include "py23compat.h"
-
-using namespace PythonHelpers;
 
 class MapItem
 {
@@ -22,16 +19,16 @@ public:
     MapItem() {}
 
     MapItem( PyObject* key, PyObject* value ) :
-        m_key( newref( key ) ), m_value( newref( value ) ) { }
+        m_key( cppy::incref( key ) ), m_value( cppy::incref( value ) ) { }
 
-    MapItem( PyObjectPtr& key, PyObjectPtr& value ) :
+    MapItem( cppy::ptr& key, cppy::ptr& value ) :
         m_key( key ), m_value( value ) { }
 
-    MapItem( PyObjectPtr& key, PyObject* value ) :
-        m_key( key ), m_value( newref( value ) ) { }
+    MapItem( cppy::ptr& key, PyObject* value ) :
+        m_key( key ), m_value( cppy::incref( value ) ) { }
 
-    MapItem( PyObject* key, PyObjectPtr& value ) :
-        m_key( newref( key ) ), m_value( value ) { }
+    MapItem( PyObject* key, cppy::ptr& value ) :
+        m_key( cppy::incref( key ) ), m_value( value ) { }
 
     ~MapItem() { }
 
@@ -47,7 +44,7 @@ public:
 
     void update( PyObject* value )
     {
-        m_value = newref( value );
+        m_value = cppy::incref( value );
     }
 
     struct CmpLess
@@ -58,22 +55,22 @@ public:
         {
             if( first.m_key == second.m_key )
                 return false;
-            return first.m_key.richcompare( second.m_key, Py_LT );
+            return first.m_key.richcmp( second.m_key, Py_LT );
         }
 
         bool operator()( MapItem& first, PyObject* second )
         {
             if( first.m_key == second )
                 return false;
-            return first.m_key.richcompare( second, Py_LT );
+            return first.m_key.richcmp( second, Py_LT );
         }
 
         bool operator()( PyObject* first, MapItem& second )
         {
             if( first == second.m_key )
                 return false;
-            PyObjectPtr temp( newref( first ) );
-            return temp.richcompare( second.m_key, Py_LT );
+            cppy::ptr temp( cppy::incref( first ) );
+            return temp.richcmp( second.m_key, Py_LT );
         }
     };
 
@@ -83,29 +80,29 @@ public:
         {
             if( first.m_key == second.m_key )
                 return true;
-            return first.m_key.richcompare( second.m_key, Py_EQ );
+            return first.m_key.richcmp( second.m_key, Py_EQ );
         }
 
         bool operator()( MapItem& first, PyObject* second )
         {
             if( first.m_key == second )
                 return true;
-            return first.m_key.richcompare( second, Py_EQ );
+            return first.m_key.richcmp( second, Py_EQ );
         }
 
         bool operator()( PyObject* first, MapItem& second )
         {
             if( first == second.m_key )
                 return true;
-            PyObjectPtr temp( newref( first ) );
-            return temp.richcompare( second.m_key, Py_EQ );
+            cppy::ptr temp( cppy::incref( first ) );
+            return temp.richcmp( second.m_key, Py_EQ );
         }
     };
 
 private:
 
-    PyObjectPtr m_key;
-    PyObjectPtr m_value;
+    cppy::ptr m_key;
+    cppy::ptr m_value;
 };
 
 
@@ -124,13 +121,13 @@ struct SortedMap
         if( it == m_items->end() )
         {
             if( default_value )
-                return newref( default_value );
+                return cppy::incref( default_value );
             return lookup_fail( key );
         }
         if( MapItem::CmpEq()( *it, key ) )
-            return newref( it->value() );
+            return cppy::incref( it->value() );
         if( default_value )
-            return newref( default_value );
+            return cppy::incref( default_value );
         return lookup_fail( key );
     }
 
@@ -185,17 +182,17 @@ struct SortedMap
         if( it == m_items->end() )
         {
             if( default_value )
-                return newref( default_value );
+                return cppy::incref( default_value );
             return lookup_fail( key );
         }
         if( MapItem::CmpEq()( *it, key ) )
         {
-            PyObject* res = newref( it->value() );
+            PyObject* res = cppy::incref( it->value() );
             m_items->erase( it );
             return res;
         }
         if( default_value )
-            return newref( default_value );
+            return cppy::incref( default_value );
         return lookup_fail( key );
     }
 
@@ -209,7 +206,7 @@ struct SortedMap
         Items::iterator end_it = m_items->end();
         for( it = m_items->begin(); it != end_it; ++it )
         {
-            PyList_SET_ITEM( pylist, listidx, newref( it->key() ) );
+            PyList_SET_ITEM( pylist, listidx, cppy::incref( it->key() ) );
             ++listidx;
         }
         return pylist;
@@ -225,7 +222,7 @@ struct SortedMap
         Items::iterator end_it = m_items->end();
         for( it = m_items->begin(); it != end_it; ++it )
         {
-            PyList_SET_ITEM( pylist, listidx, newref( it->value() ) );
+            PyList_SET_ITEM( pylist, listidx, cppy::incref( it->value() ) );
             ++listidx;
         }
         return pylist;
@@ -244,8 +241,8 @@ struct SortedMap
             PyObject* pytuple = PyTuple_New( 2 );
             if( !pytuple )
                 return 0;
-            PyTuple_SET_ITEM( pytuple, 0, newref( it->key() ) );
-            PyTuple_SET_ITEM( pytuple, 1, newref( it->value() ) );
+            PyTuple_SET_ITEM( pytuple, 0, cppy::incref( it->key() ) );
+            PyTuple_SET_ITEM( pytuple, 1, cppy::incref( it->value() ) );
             PyList_SET_ITEM( pylist, listidx, pytuple );
             ++listidx;
         }
@@ -254,10 +251,10 @@ struct SortedMap
 
     static PyObject* lookup_fail( PyObject* key )
     {
-        PyObjectPtr pystr( PyObject_Str( key ) );
+        cppy::ptr pystr( PyObject_Str( key ) );
         if( !pystr )
             return 0;
-        PyObjectPtr pytuple( PyTuple_Pack( 1, key ) );
+        cppy::ptr pytuple( PyTuple_Pack( 1, key ) );
         if (!pytuple)
             return 0;
         PyErr_SetObject(PyExc_KeyError, pytuple.get());
@@ -281,22 +278,13 @@ SortedMap_new( PyTypeObject* type, PyObject* args, PyObject* kwargs )
 // decref, including calls into methods which mutate the vector.
 // To avoid segfaults, first make the vector empty, then let the
 // destructors run for the old items.
-#if PY_MAJOR_VERSION >= 3
-    static int
-    SortedMap_clear( SortedMap* self )
-    {
-        SortedMap::Items empty;
-        self->m_items->swap( empty );
-        return 0;
-    }
-#else
-    static void
-    SortedMap_clear( SortedMap* self )
-    {
-        SortedMap::Items empty;
-        self->m_items->swap( empty );
-    }
-#endif
+static int
+SortedMap_clear( SortedMap* self )
+{
+    SortedMap::Items empty;
+    self->m_items->swap( empty );
+    return 0;
+}
 
 
 static int
@@ -363,16 +351,16 @@ SortedMap_contains( SortedMap* self, PyObject* key )
 
 static PySequenceMethods
 SortedMap_as_sequence = {
-    0,                          /* sq_length */
-    0,                          /* sq_concat */
-    0,                          /* sq_repeat */
-    0,                          /* sq_item */
-    0,                          /* sq_slice */
-    0,                          /* sq_ass_item */
-    0,                          /* sq_ass_slice */
+    0,                                /* sq_length */
+    0,                                /* sq_concat */
+    0,                                /* sq_repeat */
+    0,                                /* sq_item */
+    0,                                /* sq_slice */
+    0,                                /* sq_ass_item */
+    0,                                /* sq_ass_slice */
     ( objobjproc )SortedMap_contains, /* sq_contains */
-    0,                          /* sq_inplace_concat */
-    0,                          /* sq_inplace_repeat */
+    0,                                /* sq_inplace_concat */
+    0,                                /* sq_inplace_repeat */
 };
 
 
@@ -389,7 +377,7 @@ SortedMap_get( SortedMap* self, PyObject* args )
         ostr << "get() expected at most 2 arguments, got " << nargs;
     else
         ostr << "get() expected at least 1 argument, got " << nargs;
-    return py_type_fail( ostr.str().c_str() );
+    return cppy::type_error( ostr.str().c_str() );
 }
 
 
@@ -406,7 +394,7 @@ SortedMap_pop( SortedMap* self, PyObject* args )
         ostr << "pop() expected at most 2 arguments, got " << nargs;
     else
         ostr << "pop() expected at least 1 argument, got " << nargs;
-    return py_type_fail( ostr.str().c_str() );
+    return cppy::type_error( ostr.str().c_str() );
 }
 
 
@@ -467,14 +455,14 @@ SortedMap_repr( SortedMap* self )
     SortedMap::Items::iterator end_it = self->m_items->end();
     for( it = self->m_items->begin(); it != end_it; ++it )
     {
-        PyObjectPtr keystr( PyObject_Str( it->key() ) );
+        cppy::ptr keystr( PyObject_Str( it->key() ) );
         if( !keystr )
             return 0;
-        PyObjectPtr valstr( PyObject_Str( it->value() ) );
+        cppy::ptr valstr( PyObject_Str( it->value() ) );
         if( !valstr )
             return 0;
-        ostr << Py23Str_AS_STRING( keystr.get() ) << ": ";
-        ostr << Py23Str_AS_STRING( valstr.get() ) << ", ";
+        ostr << PyUnicode_AsUTF8( keystr.get() ) << ": ";
+        ostr << PyUnicode_AsUTF8( valstr.get() ) << ", ";
     }
     if( self->m_items->size() > 0 )
         ostr.seekp( -2, std::ios_base::cur );
@@ -498,7 +486,7 @@ SortedMap_sizeof( SortedMap* self, PyObject* args )
     Py_ssize_t size = Py_TYPE(self)->tp_basicsize;
     size += sizeof( SortedMap::Items );
     size += sizeof( MapItem ) * self->m_items->capacity();
-    return Py23Int_FromSsize_t( size );
+    return PyLong_FromSsize_t( size );
 }
 
 
@@ -530,57 +518,51 @@ SortedMap_methods[] = {
 
 PyTypeObject SortedMap_Type = {
     PyVarObject_HEAD_INIT( NULL, 0 )
-    "sortedmap.sortedmap",                  /* tp_name */
-    sizeof( SortedMap ),                    /* tp_basicsize */
-    0,                                      /* tp_itemsize */
-    (destructor)SortedMap_dealloc,          /* tp_dealloc */
-    (printfunc)0,                           /* tp_print */
-    (getattrfunc)0,                         /* tp_getattr */
-    (setattrfunc)0,                         /* tp_setattr */
-#if PY_VERSION_HEX >= 0x03050000
-	( PyAsyncMethods* )0,                   /* tp_as_async */
-#elif PY_VERSION_HEX >= 0x03000000
-	( void* ) 0,                            /* tp_reserved */
-#else
-	( cmpfunc )0,                           /* tp_compare */
-#endif
-    (reprfunc)SortedMap_repr,               /* tp_repr */
-    (PyNumberMethods*)0,                    /* tp_as_number */
-    (PySequenceMethods*)&SortedMap_as_sequence, /* tp_as_sequence */
-    (PyMappingMethods*)&SortedMap_as_mapping,   /* tp_as_mapping */
-    (hashfunc)0,                            /* tp_hash */
-    (ternaryfunc)0,                         /* tp_call */
-    (reprfunc)0,                            /* tp_str */
-    (getattrofunc)0,                        /* tp_getattro */
-    (setattrofunc)0,                        /* tp_setattro */
-    (PyBufferProcs*)0,                      /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC, /* tp_flags */
-    0,                                      /* Documentation string */
-    (traverseproc)SortedMap_traverse,       /* tp_traverse */
-    (inquiry)SortedMap_clear,               /* tp_clear */
-    (richcmpfunc)0,                         /* tp_richcompare */
-    0,                                      /* tp_weaklistoffset */
-    (getiterfunc)0,                         /* tp_iter */
-    (iternextfunc)0,                        /* tp_iternext */
-    (struct PyMethodDef*)SortedMap_methods, /* tp_methods */
-    (struct PyMemberDef*)0,                 /* tp_members */
-    0,                                      /* tp_getset */
-    0,                                      /* tp_base */
-    0,                                      /* tp_dict */
-    (descrgetfunc)0,                        /* tp_descr_get */
-    (descrsetfunc)0,                        /* tp_descr_set */
-    0,                                      /* tp_dictoffset */
-    (initproc)0,                            /* tp_init */
-    (allocfunc)PyType_GenericAlloc,         /* tp_alloc */
-    (newfunc)SortedMap_new,                 /* tp_new */
-    (freefunc)0,                            /* tp_free */
-    (inquiry)0,                             /* tp_is_gc */
-    0,                                      /* tp_bases */
-    0,                                      /* tp_mro */
-    0,                                      /* tp_cache */
-    0,                                      /* tp_subclasses */
-    0,                                      /* tp_weaklist */
-    (destructor)0                           /* tp_del */
+    "atom.sortedmap.sortedmap",                   /* tp_name */
+    sizeof( SortedMap ),                          /* tp_basicsize */
+    0,                                            /* tp_itemsize */
+    ( destructor )SortedMap_dealloc,              /* tp_dealloc */
+    ( printfunc )0,                               /* tp_print */
+    ( getattrfunc )0,                             /* tp_getattr */
+    ( setattrfunc )0,                             /* tp_setattr */
+	( PyAsyncMethods* )0,                         /* tp_as_async */
+    ( reprfunc )SortedMap_repr,                   /* tp_repr */
+    ( PyNumberMethods* )0,                        /* tp_as_number */
+    ( PySequenceMethods* )&SortedMap_as_sequence, /* tp_as_sequence */
+    ( PyMappingMethods* )&SortedMap_as_mapping,   /* tp_as_mapping */
+    ( hashfunc )0,                                /* tp_hash */
+    ( ternaryfunc )0,                             /* tp_call */
+    ( reprfunc )0,                                /* tp_str */
+    ( getattrofunc )0,                            /* tp_getattro */
+    ( setattrofunc )0,                            /* tp_setattro */
+    ( PyBufferProcs* )0,                          /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,      /* tp_flags */
+    0,                                            /* Documentation string */
+    ( traverseproc )SortedMap_traverse,           /* tp_traverse */
+    ( inquiry )SortedMap_clear,                   /* tp_clear */
+    ( richcmpfunc )0,                             /* tp_richcompare */
+    0,                                            /* tp_weaklistoffset */
+    ( getiterfunc )0,                             /* tp_iter */
+    ( iternextfunc )0,                            /* tp_iternext */
+    ( struct PyMethodDef* )SortedMap_methods,     /* tp_methods */
+    ( struct PyMemberDef* )0,                     /* tp_members */
+    0,                                            /* tp_getset */
+    0,                                            /* tp_base */
+    0,                                            /* tp_dict */
+    ( descrgetfunc )0,                            /* tp_descr_get */
+    ( descrsetfunc )0,                            /* tp_descr_set */
+    0,                                            /* tp_dictoffset */
+    ( initproc )0,                                /* tp_init */
+    ( allocfunc )PyType_GenericAlloc,             /* tp_alloc */
+    ( newfunc )SortedMap_new,                     /* tp_new */
+    ( freefunc )0,                                /* tp_free */
+    ( inquiry )0,                                 /* tp_is_gc */
+    0,                                            /* tp_bases */
+    0,                                            /* tp_mro */
+    0,                                            /* tp_cache */
+    0,                                            /* tp_subclasses */
+    0,                                            /* tp_weaklist */
+    ( destructor )0                               /* tp_del */
 };
 
 
@@ -589,7 +571,6 @@ sortedmap_methods[] = {
     { 0 } // Sentinel
 };
 
-#if PY_MAJOR_VERSION >= 3
 
 static struct PyModuleDef moduledef = {
         PyModuleDef_HEAD_INIT,
@@ -603,23 +584,16 @@ static struct PyModuleDef moduledef = {
         NULL
 };
 
-#endif
 
-MOD_INIT( sortedmap )
+PyMODINIT_FUNC PyInit_sortedmap(void)
 {
-#if PY_MAJOR_VERSION >= 3
     PyObject *mod = PyModule_Create(&moduledef);
-#else
-    PyObject* mod = Py_InitModule( "sortedmap", sortedmap_methods );
-#endif
     if( !mod )
-        INITERROR;
+        return 0;
     if( PyType_Ready( &SortedMap_Type ) )
-        INITERROR;
+        return 0;
     Py_INCREF( ( PyObject* )( &SortedMap_Type ) );
     PyModule_AddObject( mod, "sortedmap", ( PyObject* )( &SortedMap_Type ) );
 
-#if PY_MAJOR_VERSION >= 3
     return mod;
-#endif
 }

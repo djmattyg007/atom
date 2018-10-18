@@ -21,7 +21,6 @@
 
 """
 import pytest
-from atom.compat import int
 
 from atom.api import (Atom, Value, Range, FloatRange, List, Dict, Typed,
                       ForwardTyped, Instance, ForwardInstance, Coerced,
