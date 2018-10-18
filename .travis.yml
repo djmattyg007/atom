@@ -6,6 +6,10 @@ dist: xenial
 sudo: required
 cache: pip
 
+branches:
+  only:
+    - master
+
 jobs:
   include:
   - name: "run test suite with python 3.5"
@@ -26,4 +30,4 @@ install:
 script:
   - py.test tests --cov atom
 after_success:
-  - - bash <(curl -s https://codecov.io/bash)
+  - bash <(curl -s https://codecov.io/bash)
